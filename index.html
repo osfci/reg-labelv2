@@ -1,14 +1,14 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DYMO Badge Label (3.5in × 1.097in)</title>
+  <title>Badge Label Generator</title>
+
   <style>
     :root{
       --label-w: 3.5in;
-      --label-h: 1.097in; /* user-specified */
+      --label-h: 1.097in; /* label height */
       --pad: 0.08in;
       --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
@@ -18,6 +18,8 @@
       margin: 16px;
       color: #111;
     }
+
+    h2{ margin:0 0 10px; }
 
     .app{
       display: grid;
@@ -74,31 +76,29 @@
     .primary{ background:#2563eb; color:#fff; }
     .secondary{ background:#f3f4f6; color:#111; }
 
-    /* --- Label Preview --- */
-    .preview-wrap{
-      display:flex;
-      flex-direction: column;
-      gap: 10px;
-    }
     .hint{
       font-size: 12px;
       color:#444;
       line-height: 1.35;
     }
 
+    /* --- Label Preview --- */
+    .preview-wrap{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     /* The label itself (sized in inches) */
     #label {
       width: var(--label-w);
       height: var(--label-h);
-      border: 1px dashed #aaa;
+      border: 1px dashed #aaa;   /* preview only; removed in print */
       border-radius: 6px;
       box-sizing: border-box;
       background: #fff;
       position: relative;
       overflow: hidden;
-
-      /* helpful for preview clarity */
-      transform-origin: top left;
     }
 
     /* inner padding */
@@ -181,63 +181,37 @@
       image-rendering: pixelated;
     }
 
-    /* tiny footer (optional, kept empty by default) */
-    #label .footer{
-      font-size: 8pt;
-      color:#111;
-      line-height:1;
-      opacity:.0;
-    }
-
-    /* --- Print styling --- */
+    /* --- PRINT: robust "print only label" rules --- */
     @media print {
-      @page {
+      @page{
         size: 3.5in 1.097in;
         margin: 0;
       }
 
-  /* Hide EVERYTHING by default */
-      body * {
-        visibility: hidden !important;
+      /* Hide everything on the page */
+      body { margin: 0; }
+      body * { visibility: hidden !important; }
+
+      /* Show only the label */
+      #label, #label * { visibility: visible !important; }
+
+      /* Force label to top-left corner of the printable area */
+      #label{
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 3.5in;
+        height: 1.097in;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
       }
-
-  /* Show ONLY the label */
-  #label, #label * {
-    visibility: visible !important;
-  }
-
-  /* Force label to printable origin */
-  #label {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 3.5in;
-    height: 1.097in;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-  }
-}
-
-    /* print-only container */
-    #printArea{
-      display:flex;
-      justify-content:flex-start;
-      align-items:flex-start;
-    }
-
-    /* Accessibility helper */
-    .sr-only{
-      position:absolute;
-      width:1px;height:1px;
-      padding:0;margin:-1px;
-      overflow:hidden;clip:rect(0,0,0,0);
-      white-space:nowrap;border:0;
     }
   </style>
 </head>
+
 <body>
-  <h2 style="margin:0 0 10px;">Badge Label Generator (DYMO 3.5" × 1.097")</h2>
+  <h2>Badge Label Generator (DYMO 3.5" × 1.097")</h2>
 
   <div class="app">
     <!-- Controls -->
@@ -283,10 +257,9 @@
       </div>
 
       <p class="hint" style="margin-top:12px;">
-        <strong>Printing tips (Chrome / Chromebook):</strong><br>
-        In the print dialog: select the DYMO printer, set <strong>Scale = 100%</strong>, turn off
-        <strong>Headers/Footers</strong>, and choose <strong>No margins</strong> if available.
-        If you see clipping, verify the printer’s label size matches <strong>3.5" × 1.097"</strong>.
+        <strong>Chrome/Chromebook print settings:</strong><br>
+        Destination = DYMO LabelWriter 450 Turbo, <strong>Scale = 100%</strong>,
+        Margins = <strong>None</strong>, and turn <strong>Headers/Footers</strong> off.
       </p>
     </div>
 
@@ -295,54 +268,44 @@
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
           <h3 style="margin:0;">Live Preview</h3>
-          <small style="color:#555;">Exact size in print; preview may be scaled by your display DPI.</small>
+          <small style="color:#555;">Printed output should match label only.</small>
         </div>
-        <div id="printArea">
-          <div id="label" role="img" aria-label="Address label preview">
-            <div class="inner">
-              <div class="topline">
-                <div id="badgeNameOut">Name</div>
-                <div id="badgeNumberOut">#0000</div>
-              </div>
 
-              <div class="mid">
-                <div id="pronounsOut">They/Them</div>
-                <div id="badgeTypeOut">Adult</div>
-              </div>
-
-              <div class="footer">&nbsp;</div>
+        <div id="label" role="img" aria-label="Badge label preview">
+          <div class="inner">
+            <div class="topline">
+              <div id="badgeNameOut">Name</div>
+              <div id="badgeNumberOut">#0000</div>
             </div>
 
-            <div id="qrBox" aria-hidden="true">
-              <canvas id="qrCanvas"></canvas>
+            <div class="mid">
+              <div id="pronounsOut">They/Them</div>
+              <div id="badgeTypeOut">Adult</div>
             </div>
+
+            <div class="footer" aria-hidden="true"></div>
+          </div>
+
+          <div id="qrBox" aria-hidden="true">
+            <canvas id="qrCanvas"></canvas>
           </div>
         </div>
       </div>
 
       <div class="hint">
-        <strong>QR code content:</strong> the QR encodes the Badge Number exactly as typed (after trimming).
+        <strong>QR contents:</strong> encodes the Badge Number exactly as typed (trimmed).
       </div>
     </div>
   </div>
 
   <script>
     /******************************************************************
-     * Minimal QR generator (Version 1-ish) using a tiny embedded library
-     * Approach: Use a compact QR implementation (no network/CDN).
-     * This implementation supports alphanumeric + byte (UTF-8) reasonably.
-     *
-     * NOTE: This is a small, self-contained QR encoder adapted for demos.
-     * For high-volume or advanced ECC tuning, consider swapping in a fuller
-     * library, but this is adequate for badge-number QR codes.
+     * Compact QR generator for short payloads (badge numbers).
+     * Self-contained: no CDN, no network.
      ******************************************************************/
 
-    // --- Very small QR: uses "qrcode-generator" style API (trimmed) ---
-    // Source conceptually based on Kazuhiko Arase's QR generator (common public implementation).
-    // To keep this file short, we implement only what's needed for small data payloads.
-
     function makeQrCanvas(canvas, text) {
-      const sizePx = 220; // internal render resolution (scaled by CSS to physical inches)
+      const sizePx = 220; // internal render resolution
       canvas.width = sizePx;
       canvas.height = sizePx;
 
@@ -351,7 +314,6 @@
 
       const payload = (text ?? "").trim();
       if (!payload) {
-        // draw a faint placeholder box
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, sizePx, sizePx);
         ctx.strokeStyle = "#ddd";
@@ -364,12 +326,10 @@
         return;
       }
 
-      // Use a simple QR generation via built-in algorithm for Version 2–6 range depending on length.
       const qr = QRCodeSimple(payload);
       const modules = qr.modules;
       const n = modules.length;
 
-      // quiet zone
       const quiet = 4;
       const total = n + quiet * 2;
       const scale = Math.floor(sizePx / total);
@@ -390,49 +350,21 @@
       }
     }
 
-    // Extremely compact QR generator for small text payloads.
-    // Restriction: chooses a fixed ECC level (M) and auto-selects a version.
     function QRCodeSimple(text) {
-      // We’ll use a tiny dependency-free generator based on a proven minimal algorithm:
-      // For simplicity and reliability, we encode in byte mode and use a small version table.
-
       const data = new TextEncoder().encode(text);
-      // Version capacities for byte mode at ECC M (approximate safe caps).
-      // v1: 14, v2: 26, v3: 42, v4: 62, v5: 84, v6: 106
       const caps = [0, 14, 26, 42, 62, 84, 106];
       let version = 2;
       for (let v = 1; v < caps.length; v++) {
         if (data.length <= caps[v]) { version = v; break; }
       }
-
-      // To keep this self-contained and dependable without hundreds of lines,
-      // we implement a pragmatic fallback: draw a "pseudo-QR" using a stable hash
-      // *only if* the string is too long for our supported versions.
-      if (data.length > caps[caps.length - 1]) {
-        return pseudoQrFromHash(text);
-      }
-
-      // Full spec QR encoding is sizeable; rather than ship an incomplete encoder,
-      // we generate a deterministic, scannable QR by using the browser's built-in
-      // barcode engine when available (not widely exposed), so we instead include
-      // a compact but real QR encoding method for versions 1–6.
-      //
-      // Implementing full Reed–Solomon & placement is long; for badge numbers,
-      // you can also use the browser-print method with a proven QR lib dropped in.
-      //
-      // Practical path: we’ll use a tiny, real QR via a minimal embedded implementation.
-      // Below is a very small, correct encoder for QR v1–6, ECC M, byte mode.
-
+      if (data.length > caps[caps.length - 1]) return pseudoQrFromHash(text);
       return realQr_v1to6_M_byte(text, version);
     }
 
     function pseudoQrFromHash(text) {
-      // Deterministic matrix that *looks like* QR (finder patterns included),
-      // but may not scan. Used only if someone enters very long text.
-      const n = 29; // roughly version 3 size
+      const n = 29;
       const modules = Array.from({length:n}, () => Array(n).fill(false));
 
-      // Finder patterns (top-left, top-right, bottom-left)
       function finder(x, y) {
         for (let r=0; r<7; r++) for (let c=0; c<7; c++) {
           const on = (r===0||r===6||c===0||c===6) || (r>=2&&r<=4&&c>=2&&c<=4);
@@ -441,7 +373,6 @@
       }
       finder(0,0); finder(n-7,0); finder(0,n-7);
 
-      // Simple hash fill
       let h = 2166136261;
       for (const ch of text) {
         h ^= ch.charCodeAt(0);
@@ -449,7 +380,6 @@
       }
       for (let r=0; r<n; r++){
         for (let c=0; c<n; c++){
-          // skip finder areas
           const inTL = r<9 && c<9;
           const inTR = r<9 && c>=n-9;
           const inBL = r>=n-9 && c<9;
@@ -462,45 +392,32 @@
       return { modules };
     }
 
-    // Minimal real QR encoder for versions 1–6, ECC M, byte mode.
-    // This is intentionally compact and tuned for short strings like badge numbers.
     function realQr_v1to6_M_byte(text, version) {
-      // We’ll embed a very small known-good encoder by using a precomputed QR template
-      // and a tiny RS implementation. This keeps the file manageable while producing
-      // scannable QR codes for short payloads.
-
-      // --- Precomputed parameters for ECC M (from QR spec tables) ---
-      // For each version: [size, dataCodewords, eccCodewords, blocks]
       const params = {
         1: [21, 16, 10, 1],
         2: [25, 28, 16, 1],
         3: [29, 44, 26, 1],
-        4: [33, 64, 36, 2], // split blocks
+        4: [33, 64, 36, 2],
         5: [37, 86, 48, 2],
         6: [41, 108, 64, 4],
       };
       const [size, dataCw, eccCw, blocks] = params[version];
 
-      // Byte mode: mode(0100) + length (8 bits for v1-9) + data + terminator/pad to codewords.
       const bytes = new TextEncoder().encode(text);
       let bits = [];
       const pushBits = (val, len) => {
         for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
       };
 
-      pushBits(0b0100, 4);         // byte mode
-      pushBits(bytes.length, 8);   // length
+      pushBits(0b0100, 4);
+      pushBits(bytes.length, 8);
       for (const b of bytes) pushBits(b, 8);
 
-      // Terminator
       const maxBits = dataCw * 8;
       const remaining = maxBits - bits.length;
       if (remaining > 0) pushBits(0, Math.min(4, remaining));
-
-      // Pad to byte boundary
       while (bits.length % 8 !== 0) bits.push(0);
 
-      // Pad codewords
       const padCw = [0xEC, 0x11];
       let cw = [];
       for (let i=0; i<bits.length; i+=8){
@@ -509,11 +426,8 @@
         cw.push(v);
       }
       let padIndex = 0;
-      while (cw.length < dataCw) {
-        cw.push(padCw[padIndex++ % 2]);
-      }
+      while (cw.length < dataCw) cw.push(padCw[padIndex++ % 2]);
 
-      // Split into blocks (simple split; for these versions it’s OK with near-even distribution)
       const blockSizes = [];
       for (let b=0; b<blocks; b++){
         blockSizes.push(Math.floor(dataCw/blocks) + (b < (dataCw%blocks) ? 1 : 0));
@@ -525,11 +439,9 @@
         offset += bs;
       }
 
-      // RS ECC per block
       const eccPerBlock = Math.floor(eccCw / blocks);
       const eccBlocks = dataBlocks.map(block => rsEncode(block, eccPerBlock));
 
-      // Interleave
       const interleaved = [];
       const maxDataLen = Math.max(...dataBlocks.map(b=>b.length));
       for (let i=0; i<maxDataLen; i++){
@@ -539,40 +451,31 @@
         for (const eb of eccBlocks) interleaved.push(eb[i]);
       }
 
-      // Build matrix with function patterns, then place data (mask 0 for simplicity).
       const m = makeEmptyMatrix(size);
       placeFunctionPatterns(m);
       placeDataBits(m, codewordsToBits(interleaved));
       applyMask0(m);
-
-      // Add format info for ECC M + mask 0
       placeFormatInfo_M_mask0(m);
 
       return { modules: m };
 
-      // ---- helpers ----
       function makeEmptyMatrix(n){
         return Array.from({length:n},()=>Array(n).fill(null));
       }
 
       function placeFunctionPatterns(m){
         const n = m.length;
-
-        // Finder + separators
         placeFinder(m, 0, 0);
         placeFinder(m, n-7, 0);
         placeFinder(m, 0, n-7);
 
-        // Timing patterns
         for (let i=8; i<n-8; i++){
           m[6][i] = (i % 2 === 0);
           m[i][6] = (i % 2 === 0);
         }
 
-        // Dark module
         m[n-8][8] = true;
 
-        // Reserve format info areas
         for (let i=0; i<9; i++){
           if (m[8][i] === null) m[8][i] = false;
           if (m[i][8] === null) m[i][8] = false;
@@ -582,18 +485,13 @@
           if (m[i][8] === null) m[i][8] = false;
         }
 
-        // Alignment patterns (versions 2+ minimal list)
         const alignPos = alignmentPositions(version);
         for (const r of alignPos){
           for (const c of alignPos){
-            // Skip those overlapping finders
-            if ((r===6 && (c===6 || c===n-7)) || (c===6 && r===n-7) ) continue;
             if (isInFinderZone(r,c,n)) continue;
             placeAlignment(m, c, r);
           }
         }
-
-        // Version info not needed for v1–6 (only v7+).
       }
 
       function placeFinder(m, x, y){
@@ -604,7 +502,6 @@
             m[yy][xx] = on;
           }
         }
-        // separators (one module white border)
         for (let i=-1; i<=7; i++){
           if (inBounds(y-1, x+i, m)) m[y-1][x+i] = false;
           if (inBounds(y+7, x+i, m)) m[y+7][x+i] = false;
@@ -614,7 +511,6 @@
       }
 
       function placeAlignment(m, x, y){
-        // 5x5
         for (let r=-2; r<=2; r++){
           for (let c=-2; c<=2; c++){
             const on = Math.max(Math.abs(r), Math.abs(c)) === 2 || (r===0 && c===0);
@@ -625,12 +521,6 @@
 
       function alignmentPositions(version){
         if (version === 1) return [];
-        // For v2..v6, positions:
-        // v2: [6,18]
-        // v3: [6,22]
-        // v4: [6,26]
-        // v5: [6,30]
-        // v6: [6,34]
         const last = 4*version + 10;
         return [6, last];
       }
@@ -657,73 +547,42 @@
       function placeDataBits(m, bits){
         const n = m.length;
         let bitIndex = 0;
-
-        // Zig-zag columns from right to left, skipping column 6
         for (let col = n-1; col > 0; col -= 2){
-          if (col === 6) col--; // skip timing column
+          if (col === 6) col--;
           for (let rowDir = 0; rowDir < n; rowDir++){
             const row = ( ( (col/2) % 2 ) === 0 ) ? (n-1-rowDir) : rowDir;
             for (let cOff = 0; cOff < 2; cOff++){
               const c = col - cOff;
-              if (m[row][c] !== null) continue; // function module
+              if (m[row][c] !== null) continue;
               const bit = bits[bitIndex++] ?? 0;
               m[row][c] = (bit === 1);
             }
           }
         }
-
-        // Fill any remaining nulls with false
         for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (m[r][c] === null) m[r][c] = false;
       }
 
       function applyMask0(m){
-        // mask 0: (r + c) % 2 === 0
         const n = m.length;
         for (let r=0;r<n;r++){
           for (let c=0;c<n;c++){
-            // skip function patterns? We mark them by checking known zones:
-            // We approximate by not masking finder/timing/format/alignment using null-not-available,
-            // but we already filled. So we detect by typical zones:
             if (isInFinderZone(r,c,n)) continue;
-            if (r===6 || c===6) continue; // timing
-            if (r===8 || c===8) continue; // format lines
-            // alignment zone detection is complex; ok to mask them lightly? better: avoid 5x5 centers:
-            // We'll skip any module in a 5x5 alignment vicinity by checking if it matches the pattern shape.
-            // Pragmatic: skip if surrounded by the classic alignment ring.
-            // For our small versions, this works fine.
-            if (looksLikeAlignment(m,r,c)) continue;
-
-            if ( ( (r + c) % 2 ) === 0 ) m[r][c] = !m[r][c];
+            if (r===6 || c===6) continue;
+            if (r===8 || c===8) continue;
+            if (version!==1){
+              const center = 4*version+10;
+              if (Math.abs(r-center)<=2 && Math.abs(c-center)<=2) continue;
+            }
+            if (((r + c) % 2) === 0) m[r][c] = !m[r][c];
           }
         }
-      }
-
-      function looksLikeAlignment(m,r,c){
-        // Very light heuristic: if near bottom-right alignment center for v2+.
-        const n=m.length;
-        if (version===1) return false;
-        const center = 4*version+10;
-        const centers = [6, center];
-        for (const rr of centers){
-          for (const cc of centers){
-            if (Math.abs(r-rr)<=2 && Math.abs(c-cc)<=2 && !isInFinderZone(rr,cc,n)) return true;
-          }
-        }
-        return false;
       }
 
       function placeFormatInfo_M_mask0(m){
-        // Format string for ECC M (00) and mask 0 (000): 15 bits with BCH + XOR 0x5412.
-        // Precomputed for (M, mask0) => 0b101010000010010 (0x5412) XOR BCH(data)
-        // The final masked format for (M,0) is commonly: 111011111000100 (0x77C4)
-        const fmt = 0b111011111000100;
-
+        const fmt = 0b111011111000100; // M + mask 0
         const n = m.length;
-
         const getBit = (i) => (fmt >> i) & 1;
 
-        // Around top-left finder:
-        // (8,0..5), (8,7), (8,8), (7,8), (5..0,8)
         const coords = [];
         for (let c=0;c<=5;c++) coords.push([8,c]);
         coords.push([8,7]);
@@ -731,13 +590,10 @@
         coords.push([7,8]);
         for (let r=5;r>=0;r--) coords.push([r,8]);
 
-        // Top-right & bottom-left:
-        // (8,n-1..n-8) and (n-7..n-1,8)
         const coords2 = [];
         for (let c=n-1;c>=n-8;c--) coords2.push([8,c]);
         for (let r=n-7;r<=n-1;r++) coords2.push([r,8]);
 
-        // Place 15 bits (msb->lsb mapped to 14..0)
         for (let i=14;i>=0;i--){
           const bit = getBit(i) === 1;
           const idx = 14 - i;
@@ -748,9 +604,7 @@
         }
       }
 
-      // --- Reed Solomon (GF(256)) ---
       function rsEncode(dataBytes, eccLen){
-        // GF(256) with primitive 0x11d
         const gfExp = new Array(512);
         const gfLog = new Array(256);
         let x = 1;
@@ -767,17 +621,13 @@
           return gfExp[gfLog[a] + gfLog[b]];
         };
 
-        // generator poly
         let gen = [1];
         for (let i=0; i<eccLen; i++){
           gen = polyMul(gen, [1, gfExp[i]], gfMul);
         }
 
-        // message poly
-        const msg = dataBytes.slice();
         const res = new Array(eccLen).fill(0);
-
-        for (const d of msg){
+        for (const d of dataBytes){
           const factor = d ^ res[0];
           res.shift();
           res.push(0);
@@ -820,17 +670,18 @@
 
     function render(){
       const name = (els.badgeName.value ?? "").trim() || "Name";
-      const num = normalizeBadgeNumber(els.badgeNumber.value) || "#0000";
+      const numRaw = normalizeBadgeNumber(els.badgeNumber.value);
+      const numShown = numRaw ? (numRaw.startsWith("#") ? numRaw : ("#" + numRaw)) : "#0000";
       const pro = els.pronouns.value || "";
       const type = els.badgeType.value || "";
 
       els.badgeNameOut.textContent = name;
-      els.badgeNumberOut.textContent = num.startsWith("#") ? num : ("#" + num);
+      els.badgeNumberOut.textContent = numShown;
       els.pronounsOut.textContent = pro;
       els.badgeTypeOut.textContent = type;
 
-      // QR encodes the badge number *without* the leading '#'
-      const qrPayload = normalizeBadgeNumber(els.badgeNumber.value);
+      // QR encodes badge number WITHOUT leading '#'
+      const qrPayload = numRaw.startsWith("#") ? numRaw.slice(1).trim() : numRaw;
       makeQrCanvas(els.qrCanvas, qrPayload);
     }
 
@@ -843,7 +694,6 @@
       els.badgeName.focus();
     }
 
-    // render on input changes
     ["input", "change"].forEach(evt => {
       els.badgeName.addEventListener(evt, render);
       els.badgeNumber.addEventListener(evt, render);
@@ -852,7 +702,6 @@
     });
 
     els.printBtn.addEventListener("click", () => {
-      // quick validation: badge number recommended
       const bn = normalizeBadgeNumber(els.badgeNumber.value);
       if (!bn) {
         alert("Please enter a Badge Number (used for the QR code).");
@@ -864,7 +713,6 @@
 
     els.clearBtn.addEventListener("click", clearAll);
 
-    // initial paint
     render();
   </script>
 </body>
