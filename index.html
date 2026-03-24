@@ -11,7 +11,7 @@
       --label-h: 1.097in;
       --pad: 0.08in;
 
-      /* QR sizing tuned for a 1.097" tall label */
+      /* QR tuned for 1.097" label height */
       --qr: 0.62in;
       --qr-gap: 0.06in;
 
@@ -27,10 +27,10 @@
     h2{ margin:0 0 10px; }
 
     .app{
-      display: grid;
+      display:grid;
       grid-template-columns: 360px 1fr;
       gap: 18px;
-      align-items: start;
+      align-items:start;
     }
 
     .card{
@@ -66,17 +66,17 @@
       display:flex;
       gap:10px;
       margin-top: 12px;
-      flex-wrap: wrap;
+      flex-wrap:wrap;
     }
 
     button{
       appearance:none;
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 14px;
+      border:0;
+      border-radius:10px;
+      padding:10px 12px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:14px;
     }
     .primary{ background:#2563eb; color:#fff; }
     .secondary{ background:#f3f4f6; color:#111; }
@@ -89,23 +89,23 @@
 
     .preview-wrap{
       display:flex;
-      flex-direction: column;
-      gap: 10px;
+      flex-direction:column;
+      gap:10px;
     }
 
-    /* ---------- Label (screen preview) ---------- */
-    #label {
+    /* -------- Label preview (screen) -------- */
+    #label{
       width: var(--label-w);
       height: var(--label-h);
-      border: 1px dashed #aaa; /* preview-only */
+      border: 1px dashed #aaa; /* preview only */
       border-radius: 6px;
       box-sizing: border-box;
-      background: #fff;
-      position: relative;
-      overflow: hidden;
+      background:#fff;
+      position:relative;
+      overflow:hidden;
     }
 
-    /* Reserve a "safe" text area that never intrudes into the QR zone */
+    /* Text area reserves a safe zone for the QR on the right */
     #label .textArea{
       position:absolute;
       top: var(--pad);
@@ -113,8 +113,9 @@
       bottom: var(--pad);
       right: calc(var(--pad) + var(--qr) + var(--qr-gap));
       display:flex;
-      flex-direction: column;
+      flex-direction:column;
       gap: 0.05in;
+      z-index: 1;
     }
 
     #label .topline{
@@ -128,27 +129,26 @@
     #badgeNameOut{
       font-size: 18pt;
       font-weight: 800;
-      letter-spacing: .2px;
       line-height: 1.0;
       white-space: nowrap;
-      overflow: hidden;
+      overflow:hidden;
       text-overflow: ellipsis;
       flex: 1 1 auto;
       min-width: 0;
     }
 
     #badgeNumberOut{
-      font-size: 9.5pt;     /* slightly smaller to prevent collisions */
+      font-size: 9.5pt;
       font-weight: 800;
       line-height: 1.0;
       white-space: nowrap;
       flex: 0 0 auto;
-      text-align: right;
+      text-align:right;
     }
 
     #label .mid{
       display:flex;
-      flex-direction: column;
+      flex-direction:column;
       gap: 0.04in;
     }
 
@@ -168,7 +168,6 @@
       white-space: nowrap;
     }
 
-    /* QR anchored bottom-right */
     #qrBox{
       position:absolute;
       right: var(--pad);
@@ -178,11 +177,13 @@
       display:flex;
       align-items:center;
       justify-content:center;
+      z-index: 10;
     }
 
     #qrCanvas{
       width: 100%;
       height: 100%;
+      display:block;
       image-rendering: pixelated;
     }
   </style>
@@ -246,7 +247,7 @@
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
           <h3 style="margin:0;">Live Preview</h3>
-          <small style="color:#555;">Print uses a dedicated print window to avoid duplicates.</small>
+          <small style="color:#555;">Print uses a dedicated print iframe (1 label).</small>
         </div>
 
         <div id="label" role="img" aria-label="Badge label preview">
@@ -276,11 +277,10 @@
 
   <script>
     /******************************************************************
-     * Compact QR generator for short payloads (badge numbers).
-     * Self-contained: no CDN, no network.
+     * QR renderer (self-contained)
      ******************************************************************/
     function makeQrCanvas(canvas, text) {
-      const sizePx = 240; // internal render resolution for crisp print
+      const sizePx = 240; // high internal resolution for crisp printing
       canvas.width = sizePx;
       canvas.height = sizePx;
 
@@ -348,10 +348,7 @@
       finder(0,0); finder(n-7,0); finder(0,n-7);
 
       let h = 2166136261;
-      for (const ch of text) {
-        h ^= ch.charCodeAt(0);
-        h = Math.imul(h, 16777619);
-      }
+      for (const ch of text) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
       for (let r=0; r<n; r++){
         for (let c=0; c<n; c++){
           const inTL = r<9 && c<9;
@@ -379,9 +376,7 @@
 
       const bytes = new TextEncoder().encode(text);
       let bits = [];
-      const pushBits = (val, len) => {
-        for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
-      };
+      const pushBits = (val, len) => { for (let i=len-1;i>=0;i--) bits.push((val>>i)&1); };
 
       pushBits(0b0100, 4);
       pushBits(bytes.length, 8);
@@ -395,8 +390,7 @@
       const padCw = [0xEC, 0x11];
       let cw = [];
       for (let i=0; i<bits.length; i+=8){
-        let v=0;
-        for (let j=0; j<8; j++) v = (v<<1) | bits[i+j];
+        let v=0; for (let j=0;j<8;j++) v=(v<<1)|bits[i+j];
         cw.push(v);
       }
       let padIndex = 0;
@@ -433,8 +427,41 @@
 
       return { modules: m };
 
-      function makeEmptyMatrix(n){
-        return Array.from({length:n},()=>Array(n).fill(null));
+      function makeEmptyMatrix(n){ return Array.from({length:n},()=>Array(n).fill(null)); }
+      function inBounds(r,c,m){ return r>=0 && c>=0 && r<m.length && c<m.length; }
+      function isInFinderZone(r,c,n){
+        const inTL = r<=8 && c<=8, inTR = r<=8 && c>=n-9, inBL = r>=n-9 && c<=8;
+        return inTL || inTR || inBL;
+      }
+
+      function placeFinder(m, x, y){
+        for (let r=0; r<7; r++){
+          for (let c=0; c<7; c++){
+            const on = (r===0||r===6||c===0||c===6) || (r>=2&&r<=4&&c>=2&&c<=4);
+            m[y+r][x+c] = on;
+          }
+        }
+        for (let i=-1; i<=7; i++){
+          if (inBounds(y-1, x+i, m)) m[y-1][x+i] = false;
+          if (inBounds(y+7, x+i, m)) m[y+7][x+i] = false;
+          if (inBounds(y+i, x-1, m)) m[y+i][x-1] = false;
+          if (inBounds(y+i, x+7, m)) m[y+i][x+7] = false;
+        }
+      }
+
+      function placeAlignment(m, x, y){
+        for (let r=-2; r<=2; r++){
+          for (let c=-2; c<=2; c++){
+            const on = Math.max(Math.abs(r), Math.abs(c)) === 2 || (r===0 && c===0);
+            if (inBounds(y+r, x+c, m) && m[y+r][x+c] === null) m[y+r][x+c] = on;
+          }
+        }
+      }
+
+      function alignmentPositions(version){
+        if (version === 1) return [];
+        const last = 4*version + 10;
+        return [6, last];
       }
 
       function placeFunctionPatterns(m){
@@ -468,53 +495,9 @@
         }
       }
 
-      function placeFinder(m, x, y){
-        for (let r=0; r<7; r++){
-          for (let c=0; c<7; c++){
-            const xx = x+c, yy=y+r;
-            const on = (r===0||r===6||c===0||c===6) || (r>=2&&r<=4&&c>=2&&c<=4);
-            m[yy][xx] = on;
-          }
-        }
-        for (let i=-1; i<=7; i++){
-          if (inBounds(y-1, x+i, m)) m[y-1][x+i] = false;
-          if (inBounds(y+7, x+i, m)) m[y+7][x+i] = false;
-          if (inBounds(y+i, x-1, m)) m[y+i][x-1] = false;
-          if (inBounds(y+i, x+7, m)) m[y+i][x+7] = false;
-        }
-      }
-
-      function placeAlignment(m, x, y){
-        for (let r=-2; r<=2; r++){
-          for (let c=-2; c<=2; c++){
-            const on = Math.max(Math.abs(r), Math.abs(c)) === 2 || (r===0 && c===0);
-            if (inBounds(y+r, x+c, m) && m[y+r][x+c] === null) m[y+r][x+c] = on;
-          }
-        }
-      }
-
-      function alignmentPositions(version){
-        if (version === 1) return [];
-        const last = 4*version + 10;
-        return [6, last];
-      }
-
-      function isInFinderZone(r,c,n){
-        const inTL = r<=8 && c<=8;
-        const inTR = r<=8 && c>=n-9;
-        const inBL = r>=n-9 && c<=8;
-        return inTL || inTR || inBL;
-      }
-
-      function inBounds(r,c,m){
-        return r>=0 && c>=0 && r<m.length && c<m.length;
-      }
-
       function codewordsToBits(cw){
         const bits=[];
-        for (const b of cw){
-          for (let i=7; i>=0; i--) bits.push((b>>i)&1);
-        }
+        for (const b of cw) for (let i=7;i>=0;i--) bits.push((b>>i)&1);
         return bits;
       }
 
@@ -553,15 +536,13 @@
       }
 
       function placeFormatInfo_M_mask0(m){
-        const fmt = 0b111011111000100; // M + mask 0
+        const fmt = 0b111011111000100; // ECC M + mask 0
         const n = m.length;
         const getBit = (i) => (fmt >> i) & 1;
 
         const coords = [];
         for (let c=0;c<=5;c++) coords.push([8,c]);
-        coords.push([8,7]);
-        coords.push([8,8]);
-        coords.push([7,8]);
+        coords.push([8,7]); coords.push([8,8]); coords.push([7,8]);
         for (let r=5;r>=0;r--) coords.push([r,8]);
 
         const coords2 = [];
@@ -572,8 +553,8 @@
           const bit = getBit(i) === 1;
           const idx = 14 - i;
           const [r1,c1] = coords[idx];
-          m[r1][c1] = bit;
           const [r2,c2] = coords2[idx];
+          m[r1][c1] = bit;
           m[r2][c2] = bit;
         }
       }
@@ -603,8 +584,7 @@
         const res = new Array(eccLen).fill(0);
         for (const d of dataBytes){
           const factor = d ^ res[0];
-          res.shift();
-          res.push(0);
+          res.shift(); res.push(0);
           for (let j=0; j<eccLen; j++){
             res[j] ^= gfMul(gen[j+1], factor);
           }
@@ -623,7 +603,9 @@
       }
     }
 
-    // ---------- UI ----------
+    /******************************************************************
+     * App logic
+     ******************************************************************/
     const els = {
       badgeName: document.getElementById("badgeName"),
       badgeNumber: document.getElementById("badgeNumber"),
@@ -663,134 +645,120 @@
       els.badgeName.focus();
     }
 
-    // Print using a dedicated print-only window to avoid duplicate labels across pages.
-    // This isolates print layout, a common best-practice for printing specific page sections. [3](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing)
-    function printLabelWindow(){
-  const bn = normalizeBadgeNumber(els.badgeNumber.value);
-  if (!bn) { 
-    alert("Please enter a Badge Number (used for the QR code)."); 
-    els.badgeNumber.focus(); 
-    return; 
-  }
+    // Build printable label HTML by cloning the label and replacing canvas with PNG img
+    function buildPrintableLabelHtml(qrDataUrl){
+      const labelNode = document.getElementById("label");
+      const clone = labelNode.cloneNode(true);
 
-  // Make sure the QR canvas is drawn with the latest badge number
-  render();
-
-  // Clone the label DOM (canvas bitmap doesn't carry over via HTML cloning)
-  const labelNode = document.getElementById("label");
-  const clone = labelNode.cloneNode(true);
-
-  // Export the on-screen QR canvas to a PNG data URL [1](https://commscope.sharepoint.com/sites/DynamicsCRM-Prod/incident/00192559/Label%20Templates%20for%20CommScope%20Structured%20Cabling%20Products%20(1).pdf?web=1)
-  const srcCanvas = document.getElementById("qrCanvas");
-  let qrDataUrl = "";
-  try {
-    qrDataUrl = srcCanvas.toDataURL("image/png");
-  } catch (e) {
-    console.error("Failed to export QR canvas to image:", e);
-  }
-
-  // Safety: if canvas was 0x0, browsers can return "data:," [1](https://commscope.sharepoint.com/sites/DynamicsCRM-Prod/incident/00192559/Label%20Templates%20for%20CommScope%20Structured%20Cabling%20Products%20(1).pdf?web=1)
-  if (!qrDataUrl || qrDataUrl === "data:,") {
-    alert("QR export failed (blank image). Check that the QR canvas is present and has a non-zero size.");
-    return;
-  }
-
-  // Replace the canvas in the cloned label with an IMG so it prints
-  const clonedCanvas = clone.querySelector("#qrCanvas");
-  if (clonedCanvas) {
-    const img = document.createElement("img");
-    img.id = "qrImg";
-    img.alt = "QR code";
-    img.src = qrDataUrl;
-    clonedCanvas.replaceWith(img);
-  }
-
-  const labelHtml = clone.outerHTML;
-
-  // Minimal CSS needed for printing only the label
-  const printCss = `
-    :root{
-      --label-w: 3.5in;
-      --label-h: 1.097in;
-      --pad: 0.08in;
-      --qr: 0.62in;
-      --qr-gap: 0.06in;
-      --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    html, body { margin: 0; padding: 0; }
-    @page { size: 3.5in 1.097in; margin: 0; }
-    body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
-
-    #label {
-      width: var(--label-w);
-      height: var(--label-h);
-      border: 0;
-      border-radius: 0;
-      box-sizing: border-box;
-      background: #fff;
-      position: relative;
-      overflow: hidden;
-    }
-    #label .textArea{
-      position:absolute;
-      top: var(--pad);
-      left: var(--pad);
-      bottom: var(--pad);
-      right: calc(var(--pad) + var(--qr) + var(--qr-gap));
-      display:flex;
-      flex-direction: column;
-      gap: 0.05in;
-    }
-    #label .topline{
-      display:flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 0.08in;
-      min-height: 0.24in;
-    }
-    #badgeNameOut{
-      font-size: 18pt;
-      font-weight: 800;
-      line-height: 1.0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-    #badgeNumberOut{
-      font-size: 9.5pt;
-      font-weight: 800;
-      line-height: 1.0;
-      white-space: nowrap;
-      flex: 0 0 auto;
-      text-align: right;
-    }
-    #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
-    #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-    #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
-
-    #qrBox{
-      position:absolute;
-      right: var(--pad);
-      bottom: var(--pad);
-      width: var(--qr);
-      height: var(--qr);
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      const clonedCanvas = clone.querySelector("#qrCanvas");
+      if (clonedCanvas) {
+        const img = document.createElement("img");
+        img.id = "qrImg";
+        img.alt = "QR code";
+        img.src = qrDataUrl;
+        clonedCanvas.replaceWith(img);
+      }
+      return clone.outerHTML;
     }
 
-    /* Print QR as an image (canvas pixels don't transfer via cloning) */
-    #qrImg { width: 100%; height: 100%; display:block; }
-    #qrCanvas { display:none !important; }
-  `;
+    // Print using a hidden iframe (avoids popup blockers, prints only 1 label)
+    function printLabel(){
+      const bn = normalizeBadgeNumber(els.badgeNumber.value);
+      if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
 
-  const w = window.open("", "printLabel", "width=600,height=500");
-  if (!w) { alert("Popup blocked. Please allow popups for this page to print labels."); return; }
+      // Ensure canvas is freshly drawn
+      render();
 
-  w.document.open();
-  w.document.write(`<!doctype html>
+      // Export the on-screen canvas to an image (so the print doc can render it)
+      let qrDataUrl = "";
+      try {
+        qrDataUrl = els.qrCanvas.toDataURL("image/png");
+      } catch (e) {
+        console.error("QR export failed:", e);
+      }
+      if (!qrDataUrl || qrDataUrl === "data:,") {
+        alert("Could not export the QR code for printing. Please try again.");
+        return;
+      }
+
+      const labelHtml = buildPrintableLabelHtml(qrDataUrl);
+
+      const printCss = `
+        :root{
+          --label-w: 3.5in;
+          --label-h: 1.097in;
+          --pad: 0.08in;
+          --qr: 0.62in;
+          --qr-gap: 0.06in;
+          --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+        html, body { margin: 0; padding: 0; }
+        @page { size: 3.5in 1.097in; margin: 0; }
+        body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
+
+        #label{
+          width: var(--label-w);
+          height: var(--label-h);
+          border: 0 !important;
+          border-radius: 0 !important;
+          box-sizing: border-box;
+          background: #fff;
+          position: relative;
+          overflow: hidden;
+        }
+        #label .textArea{
+          position:absolute;
+          top: var(--pad);
+          left: var(--pad);
+          bottom: var(--pad);
+          right: calc(var(--pad) + var(--qr) + var(--qr-gap));
+          display:flex;
+          flex-direction: column;
+          gap: 0.05in;
+        }
+        #label .topline{
+          display:flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 0.08in;
+          min-height: 0.24in;
+        }
+        #badgeNameOut{
+          font-size: 18pt;
+          font-weight: 800;
+          line-height: 1.0;
+          white-space: nowrap;
+          overflow:hidden;
+          text-overflow: ellipsis;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+        #badgeNumberOut{
+          font-size: 9.5pt;
+          font-weight: 800;
+          line-height: 1.0;
+          white-space: nowrap;
+          flex: 0 0 auto;
+          text-align:right;
+        }
+        #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
+        #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+        #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
+
+        #qrBox{
+          position:absolute;
+          right: var(--pad);
+          bottom: var(--pad);
+          width: var(--qr);
+          height: var(--qr);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        }
+        #qrImg{ width: 100%; height: 100%; display:block; }
+      `;
+
+      const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -799,15 +767,47 @@
 </head>
 <body>
   ${labelHtml}
-  <script>
-    window.onload = () => window.print();
-    window.onafterprint = () => window.close();
-  <\/script>
 </body>
-</html>`);
-  w.document.close();
-}
-``
+</html>`;
+
+      // Remove any prior print frame
+      const old = document.getElementById("printFrame");
+      if (old) old.remove();
+
+      const iframe = document.createElement("iframe");
+      iframe.id = "printFrame";
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      // Give the browser a tick to layout images, then print
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          // Clean up after print (some browsers don't fire afterprint reliably)
+          setTimeout(() => iframe.remove(), 1500);
+        }, 50);
+      };
+
+      // Some browsers won’t fire iframe.onload for document.write, so also fallback:
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          setTimeout(() => iframe.remove(), 1500);
+        } catch {}
+      }, 200);
+    }
 
     ["input", "change"].forEach(evt => {
       els.badgeName.addEventListener(evt, render);
@@ -816,7 +816,7 @@
       els.badgeType.addEventListener(evt, render);
     });
 
-    els.printBtn.addEventListener("click", printLabelWindow);
+    els.printBtn.addEventListener("click", printLabel);
     els.clearBtn.addEventListener("click", clearAll);
 
     render();
