@@ -667,18 +667,20 @@
     // This isolates print layout, a common best-practice for printing specific page sections. [3](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing)
     function printLabelWindow(){
   const bn = normalizeBadgeNumber(els.badgeNumber.value);
-  if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
+  if (!bn) { 
+    alert("Please enter a Badge Number (used for the QR code)."); 
+    els.badgeNumber.focus(); 
+    return; 
+  }
 
-  // Ensure the latest inputs + QR are rendered before we snapshot the canvas
-  // (especially if user types and immediately presses Print)
+  // Make sure the QR canvas is drawn with the latest badge number
   render();
 
-  // Clone the label DOM (canvas pixels do NOT survive outerHTML)
+  // Clone the label DOM (canvas bitmap doesn't carry over via HTML cloning)
   const labelNode = document.getElementById("label");
   const clone = labelNode.cloneNode(true);
 
-  // Export the onscreen QR canvas to an image data URL (PNG is default)
-  // toDataURL returns a data URL string like "data:image/png;base64,..." [1](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL)
+  // Export the on-screen QR canvas to a PNG data URL [1](https://commscope.sharepoint.com/sites/DynamicsCRM-Prod/incident/00192559/Label%20Templates%20for%20CommScope%20Structured%20Cabling%20Products%20(1).pdf?web=1)
   const srcCanvas = document.getElementById("qrCanvas");
   let qrDataUrl = "";
   try {
@@ -687,7 +689,13 @@
     console.error("Failed to export QR canvas to image:", e);
   }
 
-  // Replace the canvas in the cloned label with an IMG so it prints reliably
+  // Safety: if canvas was 0x0, browsers can return "data:," [1](https://commscope.sharepoint.com/sites/DynamicsCRM-Prod/incident/00192559/Label%20Templates%20for%20CommScope%20Structured%20Cabling%20Products%20(1).pdf?web=1)
+  if (!qrDataUrl || qrDataUrl === "data:,") {
+    alert("QR export failed (blank image). Check that the QR canvas is present and has a non-zero size.");
+    return;
+  }
+
+  // Replace the canvas in the cloned label with an IMG so it prints
   const clonedCanvas = clone.querySelector("#qrCanvas");
   if (clonedCanvas) {
     const img = document.createElement("img");
@@ -773,7 +781,7 @@
       justify-content:center;
     }
 
-    /* Print QR as an image (canvas pixels don't transfer via outerHTML cloning) */
+    /* Print QR as an image (canvas pixels don't transfer via cloning) */
     #qrImg { width: 100%; height: 100%; display:block; }
     #qrCanvas { display:none !important; }
   `;
