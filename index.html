@@ -666,92 +666,123 @@
     // Print using a dedicated print-only window to avoid duplicate labels across pages.
     // This isolates print layout, a common best-practice for printing specific page sections. [3](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing)
     function printLabelWindow(){
-      const bn = normalizeBadgeNumber(els.badgeNumber.value);
-      if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
+  const bn = normalizeBadgeNumber(els.badgeNumber.value);
+  if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
 
-      // Clone label HTML
-      const labelHtml = document.getElementById("label").outerHTML;
+  // Ensure the latest inputs + QR are rendered before we snapshot the canvas
+  // (especially if user types and immediately presses Print)
+  render();
 
-      // Minimal CSS needed for printing only the label
-      const printCss = `
-        :root{
-          --label-w: 3.5in;
-          --label-h: 1.097in;
-          --pad: 0.08in;
-          --qr: 0.62in;
-          --qr-gap: 0.06in;
-          --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        }
-        html, body { margin: 0; padding: 0; }
-        @page { size: 3.5in 1.097in; margin: 0; }
-        body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
+  // Clone the label DOM (canvas pixels do NOT survive outerHTML)
+  const labelNode = document.getElementById("label");
+  const clone = labelNode.cloneNode(true);
 
-        #label {
-          width: var(--label-w);
-          height: var(--label-h);
-          border: 0;
-          border-radius: 0;
-          box-sizing: border-box;
-          background: #fff;
-          position: relative;
-          overflow: hidden;
-        }
-        #label .textArea{
-          position:absolute;
-          top: var(--pad);
-          left: var(--pad);
-          bottom: var(--pad);
-          right: calc(var(--pad) + var(--qr) + var(--qr-gap));
-          display:flex;
-          flex-direction: column;
-          gap: 0.05in;
-        }
-        #label .topline{
-          display:flex;
-          justify-content: space-between;
-          align-items: baseline;
-          gap: 0.08in;
-          min-height: 0.24in;
-        }
-        #badgeNameOut{
-          font-size: 18pt;
-          font-weight: 800;
-          line-height: 1.0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-        #badgeNumberOut{
-          font-size: 9.5pt;
-          font-weight: 800;
-          line-height: 1.0;
-          white-space: nowrap;
-          flex: 0 0 auto;
-          text-align: right;
-        }
-        #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
-        #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-        #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
-        #qrBox{
-          position:absolute;
-          right: var(--pad);
-          bottom: var(--pad);
-          width: var(--qr);
-          height: var(--qr);
-          display:flex;
-          align-items:center;
-          justify-content:center;
-        }
-        #qrCanvas{ width: 100%; height: 100%; image-rendering: pixelated; }
-      `;
+  // Export the onscreen QR canvas to an image data URL (PNG is default)
+  // toDataURL returns a data URL string like "data:image/png;base64,..." [1](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL)
+  const srcCanvas = document.getElementById("qrCanvas");
+  let qrDataUrl = "";
+  try {
+    qrDataUrl = srcCanvas.toDataURL("image/png");
+  } catch (e) {
+    console.error("Failed to export QR canvas to image:", e);
+  }
 
-      const w = window.open("", "printLabel", "width=600,height=500");
-      if (!w) { alert("Popup blocked. Please allow popups for this page to print labels."); return; }
+  // Replace the canvas in the cloned label with an IMG so it prints reliably
+  const clonedCanvas = clone.querySelector("#qrCanvas");
+  if (clonedCanvas) {
+    const img = document.createElement("img");
+    img.id = "qrImg";
+    img.alt = "QR code";
+    img.src = qrDataUrl;
+    clonedCanvas.replaceWith(img);
+  }
 
-      w.document.open();
-      w.document.write(`<!doctype html>
+  const labelHtml = clone.outerHTML;
+
+  // Minimal CSS needed for printing only the label
+  const printCss = `
+    :root{
+      --label-w: 3.5in;
+      --label-h: 1.097in;
+      --pad: 0.08in;
+      --qr: 0.62in;
+      --qr-gap: 0.06in;
+      --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    html, body { margin: 0; padding: 0; }
+    @page { size: 3.5in 1.097in; margin: 0; }
+    body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
+
+    #label {
+      width: var(--label-w);
+      height: var(--label-h);
+      border: 0;
+      border-radius: 0;
+      box-sizing: border-box;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    #label .textArea{
+      position:absolute;
+      top: var(--pad);
+      left: var(--pad);
+      bottom: var(--pad);
+      right: calc(var(--pad) + var(--qr) + var(--qr-gap));
+      display:flex;
+      flex-direction: column;
+      gap: 0.05in;
+    }
+    #label .topline{
+      display:flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.08in;
+      min-height: 0.24in;
+    }
+    #badgeNameOut{
+      font-size: 18pt;
+      font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    #badgeNumberOut{
+      font-size: 9.5pt;
+      font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      text-align: right;
+    }
+    #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
+    #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+    #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
+
+    #qrBox{
+      position:absolute;
+      right: var(--pad);
+      bottom: var(--pad);
+      width: var(--qr);
+      height: var(--qr);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    /* Print QR as an image (canvas pixels don't transfer via outerHTML cloning) */
+    #qrImg { width: 100%; height: 100%; display:block; }
+    #qrCanvas { display:none !important; }
+  `;
+
+  const w = window.open("", "printLabel", "width=600,height=500");
+  if (!w) { alert("Popup blocked. Please allow popups for this page to print labels."); return; }
+
+  w.document.open();
+  w.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -761,14 +792,14 @@
 <body>
   ${labelHtml}
   <script>
-    // Print once the document is ready, then close after printing. [3](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing)
     window.onload = () => window.print();
     window.onafterprint = () => window.close();
   <\/script>
 </body>
 </html>`);
-      w.document.close();
-    }
+  w.document.close();
+}
+``
 
     ["input", "change"].forEach(evt => {
       els.badgeName.addEventListener(evt, render);
