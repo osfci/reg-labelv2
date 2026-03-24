@@ -623,6 +623,7 @@
     function normalizeBadgeNumber(s){ return (s ?? "").trim(); }
 
     function render(){
+      console.log("QR payload:", qrPayload);
       const name = (els.badgeName.value ?? "").trim() || "Name";
       const numRaw = normalizeBadgeNumber(els.badgeNumber.value);
       const numShown = numRaw ? (numRaw.startsWith("#") ? numRaw : ("#" + numRaw)) : "#0000";
