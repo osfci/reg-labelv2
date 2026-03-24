@@ -191,25 +191,33 @@
 
     /* --- Print styling --- */
     @media print {
-      /* Print ONLY the label */
-      body{ margin: 0; }
-      .app, .card, .hint { display:none !important; }
-
-      #printArea{
-        display:block !important;
-      }
-
-      /* Ensure exact page size */
-      @page{
+      @page {
         size: 3.5in 1.097in;
         margin: 0;
       }
 
-      #label{
-        border: 0;       /* no dashed preview border on print */
-        border-radius: 0;
+  /* Hide EVERYTHING by default */
+      body * {
+        visibility: hidden !important;
       }
-    }
+
+  /* Show ONLY the label */
+  #label, #label * {
+    visibility: visible !important;
+  }
+
+  /* Force label to printable origin */
+  #label {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 3.5in;
+    height: 1.097in;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}
 
     /* print-only container */
     #printArea{
