@@ -635,7 +635,6 @@
       els.badgeTypeOut.textContent = els.badgeType.value || "";
 
       const qrPayload = numRaw.startsWith("#") ? numRaw.slice(1).trim() : numRaw;
-      // makeQrCanvas(els.qrCanvas, qrPayload);
       testWithLibraryQR(qrPayload);
       console.log("QR payload:", qrPayload);
     }
