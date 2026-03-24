@@ -635,7 +635,8 @@
       els.badgeTypeOut.textContent = els.badgeType.value || "";
 
       const qrPayload = numRaw.startsWith("#") ? numRaw.slice(1).trim() : numRaw;
-      makeQrCanvas(els.qrCanvas, qrPayload);
+      // makeQrCanvas(els.qrCanvas, qrPayload);
+      testWithLibraryQR(qrPayload);
       console.log("QR payload:", qrPayload);
     }
 
@@ -664,6 +665,37 @@
       return clone.outerHTML;
     }
 
+    // Temporary QR code test
+    function testWithLibraryQR(text) {
+  const size = 240;
+  const canvas = els.qrCanvas;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, size, size);
+
+  // Very simple, spec-correct QR (no styling)
+  const qr = qrcodegen.QrCode.encodeText(text, qrcodegen.QrCode.Ecc.M);
+  const scale = Math.floor(size / (qr.size + 8));
+  const offset = Math.floor((size - qr.size * scale) / 2);
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#000";
+
+  for (let y = 0; y < qr.size; y++) {
+    for (let x = 0; x < qr.size; x++) {
+      if (qr.getModule(x, y)) {
+        ctx.fillRect(
+          offset + x * scale,
+          offset + y * scale,
+          scale,
+          scale
+        );
+      }
+    }
+
+    
     // Print using a hidden iframe (avoids popup blockers, prints only 1 label)
     function printLabel(){
       const bn = normalizeBadgeNumber(els.badgeNumber.value);
