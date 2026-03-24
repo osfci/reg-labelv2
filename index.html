@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Badge Label Generator</title>
-
+  
   <style>
     :root{
       --label-w: 3.5in;
@@ -17,6 +18,7 @@
 
       --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
+    
 
     body{
       font-family: var(--font);
@@ -280,51 +282,53 @@
      * QR renderer (self-contained)
      ******************************************************************/
     function makeQrCanvas(canvas, text) {
-      const sizePx = 240; // high internal resolution for crisp printing
-      canvas.width = sizePx;
-      canvas.height = sizePx;
+  const sizePx = 240;
+  canvas.width = sizePx;
+  canvas.height = sizePx;
 
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, sizePx, sizePx);
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, sizePx, sizePx);
 
-      const payload = (text ?? "").trim();
-      if (!payload) {
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, sizePx, sizePx);
-        ctx.strokeStyle = "#ddd";
-        ctx.strokeRect(0.5, 0.5, sizePx - 1, sizePx - 1);
-        ctx.fillStyle = "#888";
-        ctx.font = "14px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("QR", sizePx/2, sizePx/2);
-        return;
-      }
+  const payload = (text ?? "").trim();
 
-      const qr = QRCodeSimple(payload);
-      const modules = qr.modules;
-      const n = modules.length;
+  if (!payload) {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, sizePx, sizePx);
+    ctx.strokeStyle = "#ddd";
+    ctx.strokeRect(0.5, 0.5, sizePx - 1, sizePx - 1);
+    ctx.fillStyle = "#888";
+    ctx.font = "14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("QR", sizePx/2, sizePx/2);
+    return;
+  }
 
-      const quiet = 4;
-      const total = n + quiet * 2;
-      const scale = Math.floor(sizePx / total);
-      const offset = Math.floor((sizePx - total * scale) / 2);
+  const qr = qrcode(0, 'M'); // auto version, ECC M
+  qr.addData(payload);
+  qr.make();
 
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, sizePx, sizePx);
-      ctx.fillStyle = "#000";
+  const cellCount = qr.getModuleCount();
+  const scale = Math.floor(sizePx / (cellCount + 8)); // includes quiet zone
+  const offset = Math.floor((sizePx - cellCount * scale) / 2);
 
-      for (let r = 0; r < n; r++) {
-        for (let c = 0; c < n; c++) {
-          if (modules[r][c]) {
-            const x = offset + (c + quiet) * scale;
-            const y = offset + (r + quiet) * scale;
-            ctx.fillRect(x, y, scale, scale);
-          }
-        }
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, sizePx, sizePx);
+
+  ctx.fillStyle = "#000";
+  for (let r = 0; r < cellCount; r++) {
+    for (let c = 0; c < cellCount; c++) {
+      if (qr.isDark(r, c)) {
+        ctx.fillRect(
+          offset + c * scale,
+          offset + r * scale,
+          scale,
+          scale
+        );
       }
     }
-
+  }
+}
     function QRCodeSimple(text) {
       const data = new TextEncoder().encode(text);
       const caps = [0, 14, 26, 42, 62, 84, 106];
