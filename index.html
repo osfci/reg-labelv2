@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Badge Label Generator</title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
   <style>
     :root{
       --label-w: 3.5in;
       --label-h: 1.097in;
       --pad: 0.08in;
+
+      /* QR tuned for 1.097" label height */
       --qr: 0.62in;
       --qr-gap: 0.06in;
+
       --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
 
@@ -23,10 +24,13 @@
       color: #111;
     }
 
+    h2{ margin:0 0 10px; }
+
     .app{
       display:grid;
       grid-template-columns: 360px 1fr;
       gap: 18px;
+      align-items:start;
     }
 
     .card{
@@ -34,38 +38,74 @@
       border-radius: 10px;
       padding: 14px;
       background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
     }
 
-    label{ font-size: 12px; font-weight: 600; }
-
+    label{
+      display:block;
+      font-size: 12px;
+      margin: 10px 0 6px;
+      font-weight: 600;
+    }
     input, select{
       width: 100%;
-      padding: 9px;
+      padding: 9px 10px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 14px;
-      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btnbar{
+      display:flex;
+      gap:10px;
+      margin-top: 12px;
+      flex-wrap:wrap;
     }
 
     button{
-      padding: 10px;
-      border-radius: 10px;
-      font-weight: 700;
+      appearance:none;
+      border:0;
+      border-radius:10px;
+      padding:10px 12px;
+      font-weight:700;
       cursor:pointer;
+      font-size:14px;
+    }
+    .primary{ background:#2563eb; color:#fff; }
+    .secondary{ background:#f3f4f6; color:#111; }
+
+    .hint{
+      font-size: 12px;
+      color:#444;
+      line-height: 1.35;
     }
 
-    .primary{ background:#2563eb; color:#fff; }
-    .secondary{ background:#f3f4f6; }
+    .preview-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
 
-    /* LABEL */
+    /* -------- Label preview (screen) -------- */
     #label{
       width: var(--label-w);
       height: var(--label-h);
-      border: 1px dashed #aaa;
+      border: 1px dashed #aaa; /* preview only */
+      border-radius: 6px;
+      box-sizing: border-box;
+      background:#fff;
       position:relative;
       overflow:hidden;
     }
 
+    /* Text area reserves a safe zone for the QR on the right */
     #label .textArea{
       position:absolute;
       top: var(--pad);
@@ -75,28 +115,58 @@
       display:flex;
       flex-direction:column;
       gap: 0.05in;
+      z-index: 1;
     }
 
-    .topline{
+    #label .topline{
       display:flex;
       justify-content: space-between;
+      align-items: baseline;
+      gap: 0.08in;
+      min-height: 0.24in;
     }
 
     #badgeNameOut{
       font-size: 18pt;
       font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    #badgeNumberOut{
+      font-size: 9.5pt;
+      font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      text-align:right;
+    }
+
+    #label .mid{
+      display:flex;
+      flex-direction:column;
+      gap: 0.04in;
+    }
+
+    #pronounsOut{
+      font-size: 11pt;
+      font-weight: 600;
+      line-height: 1.05;
       white-space: nowrap;
       overflow:hidden;
       text-overflow: ellipsis;
     }
 
-    #badgeNumberOut{
-      font-size: 9pt;
-      font-weight: 800;
+    #badgeTypeOut{
+      font-size: 11pt;
+      font-weight: 900;
+      line-height: 1.05;
+      white-space: nowrap;
     }
-
-    #pronounsOut{ font-size: 11pt; }
-    #badgeTypeOut{ font-size: 11pt; font-weight: 900; }
 
     #qrBox{
       position:absolute;
@@ -104,124 +174,653 @@
       bottom: var(--pad);
       width: var(--qr);
       height: var(--qr);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index: 10;
     }
 
-    #qrBox div {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    @media print {
-      @page { size: 3.5in 1.097in; margin: 0; }
-      body * { visibility: hidden; }
-      #label, #label * { visibility: visible; }
-      #label { position:absolute; top:0; left:0; }
+    #qrCanvas{
+      width: 100%;
+      height: 100%;
+      display:block;
+      image-rendering: pixelated;
     }
   </style>
 </head>
 
 <body>
+  <h2>Badge Label Generator (DYMO 3.5" × 1.097")</h2>
 
-<h2>Badge Label Generator</h2>
-
-<div class="app">
-
-  <div class="card">
-    <label>Badge Name</label>
-    <input id="badgeName">
-
-    <label>Badge Number</label>
-    <input id="badgeNumber">
-
-    <label>Pronouns</label>
-    <select id="pronouns">
-      <option value="" selected></option>
-      <option>They/Them</option>
-      <option>She/Her</option>
-      <option>He/Him</option>
-    </select>
-
-    <label>Badge Type</label>
-    <select id="badgeType">
-      <option>Adult</option>
-      <option>Youth</option>
-      <option>Child</option>
-      <option>Staff</option>
-    </select>
-
-    <button class="primary" onclick="printLabel()">Print</button>
-    <button class="secondary" onclick="clearAll()">Clear</button>
-  </div>
-
-  <div class="card">
-    <div id="label">
-      <div class="textArea">
-        <div class="topline">
-          <div id="badgeNameOut">Name</div>
-          <div id="badgeNumberOut">#0000</div>
+  <div class="app">
+    <!-- Controls -->
+    <div class="card">
+      <div class="row2">
+        <div>
+          <label for="badgeName">Badge Name</label>
+          <input id="badgeName" type="text" placeholder="e.g., Alex Morgan" maxlength="40" />
         </div>
-
-        <div id="pronounsOut"></div>
-        <div id="badgeTypeOut"></div>
+        <div>
+          <label for="badgeNumber">Badge Number</label>
+          <input id="badgeNumber" type="text" placeholder="e.g., 10492" maxlength="40" inputmode="numeric" />
+        </div>
       </div>
 
-      <div id="qrBox"></div>
+      <div class="row2">
+        <div>
+          <label for="pronouns">Pronouns</label>
+          <select id="pronouns">
+            <option value="" selected></option>option>
+            <option value="They/Them">They/Them</option>
+            <option value="She/Her">She/Her</option>
+            <option value="He/Him">He/Him</option>
+            <option value="She/They">She/They</option>
+            <option value="He/They">He/They</option>
+            <option value="Xe/Xem">Xe/Xem</option>
+          </select>
+        </div>
+        <div>
+          <label for="badgeType">Badge Type</label>
+          <select id="badgeType">
+            <option value="Adult">Adult</option>
+            <option value="Youth">Youth</option>
+            <option value="Child">Child</option>
+            <option value="Staff">Staff</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btnbar">
+        <button class="primary" id="printBtn" type="button">Print Label</button>
+        <button class="secondary" id="clearBtn" type="button">Clear</button>
+      </div>
+
+      <p class="hint" style="margin-top:12px;">
+        <strong>ChromeOS print settings:</strong><br>
+        Destination = DYMO LabelWriter 450 Turbo, <strong>Scale = 100%</strong>,
+        Margins = <strong>None</strong>, Headers/Footers = <strong>Off</strong>.
+      </p>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-wrap">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+          <h3 style="margin:0;">Live Preview</h3>
+          <small style="color:#555;">Print uses a dedicated print iframe (1 label).</small>
+        </div>
+
+        <div id="label" role="img" aria-label="Badge label preview">
+          <div class="textArea">
+            <div class="topline">
+              <div id="badgeNameOut">Name</div>
+              <div id="badgeNumberOut">#0000</div>
+            </div>
+
+            <div class="mid">
+              <div id="pronounsOut">They/Them</div>
+              <div id="badgeTypeOut">Adult</div>
+            </div>
+          </div>
+
+          <div id="qrBox" aria-hidden="true">
+            <canvas id="qrCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        <strong>QR contents:</strong> encodes the Badge Number exactly as typed (trimmed, without a leading “#”).
+      </div>
     </div>
   </div>
 
-</div>
+  <script>
+    /******************************************************************
+     * QR renderer (self-contained)
+     ******************************************************************/
+    function makeQrCanvas(canvas, text) {
+      const sizePx = 240; // high internal resolution for crisp printing
+      canvas.width = sizePx;
+      canvas.height = sizePx;
 
-<script>
-const els = {
-  name: document.getElementById("badgeName"),
-  number: document.getElementById("badgeNumber"),
-  pronouns: document.getElementById("pronouns"),
-  type: document.getElementById("badgeType"),
-  nameOut: document.getElementById("badgeNameOut"),
-  numOut: document.getElementById("badgeNumberOut"),
-  pronounsOut: document.getElementById("pronounsOut"),
-  typeOut: document.getElementById("badgeTypeOut"),
-  qrBox: document.getElementById("qrBox")
-};
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, sizePx, sizePx);
 
-function render() {
-  const name = els.name.value || "Name";
-  const num = els.number.value.trim();
+      const payload = (text ?? "").trim();
+      if (!payload) {
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, sizePx, sizePx);
+        ctx.strokeStyle = "#ddd";
+        ctx.strokeRect(0.5, 0.5, sizePx - 1, sizePx - 1);
+        ctx.fillStyle = "#888";
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("QR", sizePx/2, sizePx/2);
+        return;
+      }
 
-  els.nameOut.textContent = name;
-  els.numOut.textContent = num ? "#" + num : "#0000";
-  els.pronounsOut.textContent = els.pronouns.value;
-  els.typeOut.textContent = els.type.value;
+      const qr = QRCodeSimple(payload);
+      const modules = qr.modules;
+      const n = modules.length;
 
-  // QR
-  els.qrBox.innerHTML = "";
-  if (num) {
-    new QRCode(els.qrBox, {
-      text: num,
-      width: 120,
-      height: 120
+      const quiet = 4;
+      const total = n + quiet * 2;
+      const scale = Math.floor(sizePx / total);
+      const offset = Math.floor((sizePx - total * scale) / 2);
+
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, sizePx, sizePx);
+      ctx.fillStyle = "#000";
+
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (modules[r][c]) {
+            const x = offset + (c + quiet) * scale;
+            const y = offset + (r + quiet) * scale;
+            ctx.fillRect(x, y, scale, scale);
+          }
+        }
+      }
+    }
+
+    function QRCodeSimple(text) {
+      const data = new TextEncoder().encode(text);
+      const caps = [0, 14, 26, 42, 62, 84, 106];
+      let version = 2;
+      for (let v = 1; v < caps.length; v++) {
+        if (data.length <= caps[v]) { version = v; break; }
+      }
+      if (data.length > caps[caps.length - 1]) return pseudoQrFromHash(text);
+      return realQr_v1to6_M_byte(text, version);
+    }
+
+    function pseudoQrFromHash(text) {
+      const n = 29;
+      const modules = Array.from({length:n}, () => Array(n).fill(false));
+      function finder(x, y) {
+        for (let r=0; r<7; r++) for (let c=0; c<7; c++) {
+          const on = (r===0||r===6||c===0||c===6) || (r>=2&&r<=4&&c>=2&&c<=4);
+          modules[y+r][x+c] = on;
+        }
+      }
+      finder(0,0); finder(n-7,0); finder(0,n-7);
+
+      let h = 2166136261;
+      for (const ch of text) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+      for (let r=0; r<n; r++){
+        for (let c=0; c<n; c++){
+          const inTL = r<9 && c<9;
+          const inTR = r<9 && c>=n-9;
+          const inBL = r>=n-9 && c<9;
+          if (inTL || inTR || inBL) continue;
+          h ^= (r*31 + c*17);
+          h = Math.imul(h, 16777619);
+          modules[r][c] = (h >>> 31) === 1;
+        }
+      }
+      return { modules };
+    }
+
+    function realQr_v1to6_M_byte(text, version) {
+      const params = {
+        1: [21, 16, 10, 1],
+        2: [25, 28, 16, 1],
+        3: [29, 44, 26, 1],
+        4: [33, 64, 36, 2],
+        5: [37, 86, 48, 2],
+        6: [41, 108, 64, 4],
+      };
+      const [size, dataCw, eccCw, blocks] = params[version];
+
+      const bytes = new TextEncoder().encode(text);
+      let bits = [];
+      const pushBits = (val, len) => { for (let i=len-1;i>=0;i--) bits.push((val>>i)&1); };
+
+      pushBits(0b0100, 4);
+      pushBits(bytes.length, 8);
+      for (const b of bytes) pushBits(b, 8);
+
+      const maxBits = dataCw * 8;
+      const remaining = maxBits - bits.length;
+      if (remaining > 0) pushBits(0, Math.min(4, remaining));
+      while (bits.length % 8 !== 0) bits.push(0);
+
+      const padCw = [0xEC, 0x11];
+      let cw = [];
+      for (let i=0; i<bits.length; i+=8){
+        let v=0; for (let j=0;j<8;j++) v=(v<<1)|bits[i+j];
+        cw.push(v);
+      }
+      let padIndex = 0;
+      while (cw.length < dataCw) cw.push(padCw[padIndex++ % 2]);
+
+      const blockSizes = [];
+      for (let b=0; b<blocks; b++){
+        blockSizes.push(Math.floor(dataCw/blocks) + (b < (dataCw%blocks) ? 1 : 0));
+      }
+      let dataBlocks = [];
+      let offset = 0;
+      for (const bs of blockSizes){
+        dataBlocks.push(cw.slice(offset, offset+bs));
+        offset += bs;
+      }
+
+      const eccPerBlock = Math.floor(eccCw / blocks);
+      const eccBlocks = dataBlocks.map(block => rsEncode(block, eccPerBlock));
+
+      const interleaved = [];
+      const maxDataLen = Math.max(...dataBlocks.map(b=>b.length));
+      for (let i=0; i<maxDataLen; i++){
+        for (const b of dataBlocks) if (i < b.length) interleaved.push(b[i]);
+      }
+      for (let i=0; i<eccPerBlock; i++){
+        for (const eb of eccBlocks) interleaved.push(eb[i]);
+      }
+
+      const m = makeEmptyMatrix(size);
+      placeFunctionPatterns(m);
+      placeDataBits(m, codewordsToBits(interleaved));
+      applyMask0(m);
+      placeFormatInfo_M_mask0(m);
+
+      return { modules: m };
+
+      function makeEmptyMatrix(n){ return Array.from({length:n},()=>Array(n).fill(null)); }
+      function inBounds(r,c,m){ return r>=0 && c>=0 && r<m.length && c<m.length; }
+      function isInFinderZone(r,c,n){
+        const inTL = r<=8 && c<=8, inTR = r<=8 && c>=n-9, inBL = r>=n-9 && c<=8;
+        return inTL || inTR || inBL;
+      }
+
+      function placeFinder(m, x, y){
+        for (let r=0; r<7; r++){
+          for (let c=0; c<7; c++){
+            const on = (r===0||r===6||c===0||c===6) || (r>=2&&r<=4&&c>=2&&c<=4);
+            m[y+r][x+c] = on;
+          }
+        }
+        for (let i=-1; i<=7; i++){
+          if (inBounds(y-1, x+i, m)) m[y-1][x+i] = false;
+          if (inBounds(y+7, x+i, m)) m[y+7][x+i] = false;
+          if (inBounds(y+i, x-1, m)) m[y+i][x-1] = false;
+          if (inBounds(y+i, x+7, m)) m[y+i][x+7] = false;
+        }
+      }
+
+      function placeAlignment(m, x, y){
+        for (let r=-2; r<=2; r++){
+          for (let c=-2; c<=2; c++){
+            const on = Math.max(Math.abs(r), Math.abs(c)) === 2 || (r===0 && c===0);
+            if (inBounds(y+r, x+c, m) && m[y+r][x+c] === null) m[y+r][x+c] = on;
+          }
+        }
+      }
+
+      function alignmentPositions(version){
+        if (version === 1) return [];
+        const last = 4*version + 10;
+        return [6, last];
+      }
+
+      function placeFunctionPatterns(m){
+        const n = m.length;
+        placeFinder(m, 0, 0);
+        placeFinder(m, n-7, 0);
+        placeFinder(m, 0, n-7);
+
+        for (let i=8; i<n-8; i++){
+          m[6][i] = (i % 2 === 0);
+          m[i][6] = (i % 2 === 0);
+        }
+
+        m[n-8][8] = true;
+
+        for (let i=0; i<9; i++){
+          if (m[8][i] === null) m[8][i] = false;
+          if (m[i][8] === null) m[i][8] = false;
+        }
+        for (let i=n-8; i<n; i++){
+          if (m[8][i] === null) m[8][i] = false;
+          if (m[i][8] === null) m[i][8] = false;
+        }
+
+        const alignPos = alignmentPositions(version);
+        for (const r of alignPos){
+          for (const c of alignPos){
+            if (isInFinderZone(r,c,n)) continue;
+            placeAlignment(m, c, r);
+          }
+        }
+      }
+
+      function codewordsToBits(cw){
+        const bits=[];
+        for (const b of cw) for (let i=7;i>=0;i--) bits.push((b>>i)&1);
+        return bits;
+      }
+
+      function placeDataBits(m, bits){
+        const n = m.length;
+        let bitIndex = 0;
+        for (let col = n-1; col > 0; col -= 2){
+          if (col === 6) col--;
+          for (let rowDir = 0; rowDir < n; rowDir++){
+            const row = (((col/2) % 2) === 0) ? (n-1-rowDir) : rowDir;
+            for (let cOff = 0; cOff < 2; cOff++){
+              const c = col - cOff;
+              if (m[row][c] !== null) continue;
+              const bit = bits[bitIndex++] ?? 0;
+              m[row][c] = (bit === 1);
+            }
+          }
+        }
+        for (let r=0;r<n;r++) for (let c=0;c<n;c++) if (m[r][c] === null) m[r][c] = false;
+      }
+
+      function applyMask0(m){
+        const n = m.length;
+        for (let r=0;r<n;r++){
+          for (let c=0;c<n;c++){
+            if (isInFinderZone(r,c,n)) continue;
+            if (r===6 || c===6) continue;
+            if (r===8 || c===8) continue;
+            if (version!==1){
+              const center = 4*version+10;
+              if (Math.abs(r-center)<=2 && Math.abs(c-center)<=2) continue;
+            }
+            if (((r + c) % 2) === 0) m[r][c] = !m[r][c];
+          }
+        }
+      }
+
+      function placeFormatInfo_M_mask0(m){
+        const fmt = 0b111011111000100; // ECC M + mask 0
+        const n = m.length;
+        const getBit = (i) => (fmt >> i) & 1;
+
+        const coords = [];
+        for (let c=0;c<=5;c++) coords.push([8,c]);
+        coords.push([8,7]); coords.push([8,8]); coords.push([7,8]);
+        for (let r=5;r>=0;r--) coords.push([r,8]);
+
+        const coords2 = [];
+        for (let c=n-1;c>=n-8;c--) coords2.push([8,c]);
+        for (let r=n-7;r<=n-1;r++) coords2.push([r,8]);
+
+        for (let i=14;i>=0;i--){
+          const bit = getBit(i) === 1;
+          const idx = 14 - i;
+          const [r1,c1] = coords[idx];
+          const [r2,c2] = coords2[idx];
+          m[r1][c1] = bit;
+          m[r2][c2] = bit;
+        }
+      }
+
+      function rsEncode(dataBytes, eccLen){
+        const gfExp = new Array(512);
+        const gfLog = new Array(256);
+        let x = 1;
+        for (let i=0; i<255; i++){
+          gfExp[i] = x;
+          gfLog[x] = i;
+          x <<= 1;
+          if (x & 0x100) x ^= 0x11d;
+        }
+        for (let i=255; i<512; i++) gfExp[i] = gfExp[i-255];
+
+        const gfMul = (a,b) => {
+          if (a===0 || b===0) return 0;
+          return gfExp[gfLog[a] + gfLog[b]];
+        };
+
+        let gen = [1];
+        for (let i=0; i<eccLen; i++){
+          gen = polyMul(gen, [1, gfExp[i]], gfMul);
+        }
+
+        const res = new Array(eccLen).fill(0);
+        for (const d of dataBytes){
+          const factor = d ^ res[0];
+          res.shift(); res.push(0);
+          for (let j=0; j<eccLen; j++){
+            res[j] ^= gfMul(gen[j+1], factor);
+          }
+        }
+        return res;
+
+        function polyMul(p,q,mul){
+          const out = new Array(p.length + q.length - 1).fill(0);
+          for (let i=0;i<p.length;i++){
+            for (let j=0;j<q.length;j++){
+              out[i+j] ^= mul(p[i], q[j]);
+            }
+          }
+          return out;
+        }
+      }
+    }
+
+    /******************************************************************
+     * App logic
+     ******************************************************************/
+    const els = {
+      badgeName: document.getElementById("badgeName"),
+      badgeNumber: document.getElementById("badgeNumber"),
+      pronouns: document.getElementById("pronouns"),
+      badgeType: document.getElementById("badgeType"),
+      badgeNameOut: document.getElementById("badgeNameOut"),
+      badgeNumberOut: document.getElementById("badgeNumberOut"),
+      pronounsOut: document.getElementById("pronounsOut"),
+      badgeTypeOut: document.getElementById("badgeTypeOut"),
+      qrCanvas: document.getElementById("qrCanvas"),
+      printBtn: document.getElementById("printBtn"),
+      clearBtn: document.getElementById("clearBtn")
+    };
+
+    function normalizeBadgeNumber(s){ return (s ?? "").trim(); }
+
+    function render(){
+      const name = (els.badgeName.value ?? "").trim() || "Name";
+      const numRaw = normalizeBadgeNumber(els.badgeNumber.value);
+      const numShown = numRaw ? (numRaw.startsWith("#") ? numRaw : ("#" + numRaw)) : "#0000";
+
+      els.badgeNameOut.textContent = name;
+      els.badgeNumberOut.textContent = numShown;
+      els.pronounsOut.textContent = els.pronouns.value || "";
+      els.badgeTypeOut.textContent = els.badgeType.value || "";
+
+      const qrPayload = numRaw.startsWith("#") ? numRaw.slice(1).trim() : numRaw;
+      makeQrCanvas(els.qrCanvas, qrPayload);
+    }
+
+    function clearAll(){
+      els.badgeName.value = "";
+      els.badgeNumber.value = "";
+      els.pronouns.selectedIndex = 0;
+      els.badgeType.selectedIndex = 0;
+      render();
+      els.badgeName.focus();
+    }
+
+    // Build printable label HTML by cloning the label and replacing canvas with PNG img
+    function buildPrintableLabelHtml(qrDataUrl){
+      const labelNode = document.getElementById("label");
+      const clone = labelNode.cloneNode(true);
+
+      const clonedCanvas = clone.querySelector("#qrCanvas");
+      if (clonedCanvas) {
+        const img = document.createElement("img");
+        img.id = "qrImg";
+        img.alt = "QR code";
+        img.src = qrDataUrl;
+        clonedCanvas.replaceWith(img);
+      }
+      return clone.outerHTML;
+    }
+
+    // Print using a hidden iframe (avoids popup blockers, prints only 1 label)
+    function printLabel(){
+      const bn = normalizeBadgeNumber(els.badgeNumber.value);
+      if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
+
+      // Ensure canvas is freshly drawn
+      render();
+
+      // Export the on-screen canvas to an image (so the print doc can render it)
+      let qrDataUrl = "";
+      try {
+        qrDataUrl = els.qrCanvas.toDataURL("image/png");
+      } catch (e) {
+        console.error("QR export failed:", e);
+      }
+      if (!qrDataUrl || qrDataUrl === "data:,") {
+        alert("Could not export the QR code for printing. Please try again.");
+        return;
+      }
+
+      const labelHtml = buildPrintableLabelHtml(qrDataUrl);
+
+      const printCss = `
+        :root{
+          --label-w: 3.5in;
+          --label-h: 1.097in;
+          --pad: 0.08in;
+          --qr: 0.62in;
+          --qr-gap: 0.06in;
+          --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+        html, body { margin: 0; padding: 0; }
+        @page { size: 3.5in 1.097in; margin: 0; }
+        body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
+
+        #label{
+          width: var(--label-w);
+          height: var(--label-h);
+          border: 0 !important;
+          border-radius: 0 !important;
+          box-sizing: border-box;
+          background: #fff;
+          position: relative;
+          overflow: hidden;
+        }
+        #label .textArea{
+          position:absolute;
+          top: var(--pad);
+          left: var(--pad);
+          bottom: var(--pad);
+          right: calc(var(--pad) + var(--qr) + var(--qr-gap));
+          display:flex;
+          flex-direction: column;
+          gap: 0.05in;
+        }
+        #label .topline{
+          display:flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 0.08in;
+          min-height: 0.24in;
+        }
+        #badgeNameOut{
+          font-size: 18pt;
+          font-weight: 800;
+          line-height: 1.0;
+          white-space: nowrap;
+          overflow:hidden;
+          text-overflow: ellipsis;
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+        #badgeNumberOut{
+          font-size: 9.5pt;
+          font-weight: 800;
+          line-height: 1.0;
+          white-space: nowrap;
+          flex: 0 0 auto;
+          text-align:right;
+        }
+        #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
+        #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+        #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
+
+        #qrBox{
+          position:absolute;
+          right: var(--pad);
+          bottom: var(--pad);
+          width: var(--qr);
+          height: var(--qr);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        }
+        #qrImg{ width: 100%; height: 100%; display:block; }
+      `;
+
+      const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Print Label</title>
+  <style>${printCss}</style>
+</head>
+<body>
+  ${labelHtml}
+</body>
+</html>`;
+
+      // Remove any prior print frame
+      const old = document.getElementById("printFrame");
+      if (old) old.remove();
+
+      const iframe = document.createElement("iframe");
+      iframe.id = "printFrame";
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      // Give the browser a tick to layout images, then print
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          // Clean up after print (some browsers don't fire afterprint reliably)
+          setTimeout(() => iframe.remove(), 1500);
+        }, 50);
+      };
+
+      // Some browsers won’t fire iframe.onload for document.write, so also fallback:
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          setTimeout(() => iframe.remove(), 1500);
+        } catch {}
+      }, 200);
+    }
+
+    ["input", "change"].forEach(evt => {
+      els.badgeName.addEventListener(evt, render);
+      els.badgeNumber.addEventListener(evt, render);
+      els.pronouns.addEventListener(evt, render);
+      els.badgeType.addEventListener(evt, render);
     });
-  }
-}
 
-function clearAll(){
-  els.name.value = "";
-  els.number.value = "";
-  els.pronouns.selectedIndex = 0;
-  render();
-}
+    els.printBtn.addEventListener("click", printLabel);
+    els.clearBtn.addEventListener("click", clearAll);
 
-function printLabel(){
-  render();
-  window.print();
-}
-
-document.querySelectorAll("input, select").forEach(el =>
-  el.addEventListener("input", render)
-);
-
-render();
-</script>
-
+    render();
+  </script>
 </body>
 </html>
+``
