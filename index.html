@@ -666,152 +666,183 @@
     }
 
     // Print using a hidden iframe (avoids popup blockers, prints only 1 label)
-    function printLabel(){
-      const bn = normalizeBadgeNumber(els.badgeNumber.value);
-      if (!bn) { alert("Please enter a Badge Number (used for the QR code)."); els.badgeNumber.focus(); return; }
+    function printLabel() {
+  const bn = normalizeBadgeNumber(els.badgeNumber.value);
+  if (!bn) {
+    alert("Please enter a Badge Number (used for the QR code).");
+    els.badgeNumber.focus();
+    return;
+  }
 
-      // Ensure canvas is freshly drawn
-      render();
+  // Ensure latest render
+  render();
 
-      // Export the on-screen canvas to an image (so the print doc can render it)
-      let qrDataUrl = "";
-      try {
-        qrDataUrl = els.qrCanvas.toDataURL("image/png");
-      } catch (e) {
-        console.error("QR export failed:", e);
-      }
-      if (!qrDataUrl || qrDataUrl === "data:,") {
-        alert("Could not export the QR code for printing. Please try again.");
-        return;
-      }
+  // Convert QR canvas to image
+  let qrDataUrl = "";
+  try {
+    qrDataUrl = els.qrCanvas.toDataURL("image/png");
+  } catch (e) {
+    console.error("QR export failed:", e);
+  }
 
-      const labelHtml = buildPrintableLabelHtml(qrDataUrl);
+  if (!qrDataUrl || qrDataUrl === "data:,") {
+    alert("Could not generate QR code for printing.");
+    return;
+  }
 
-      const printCss = `
-        :root{
-          --label-w: 3.5in;
-          --label-h: 1.097in;
-          --pad: 0.08in;
-          --qr: 0.62in;
-          --qr-gap: 0.06in;
-          --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        }
-        html, body { margin: 0; padding: 0; }
-        @page { size: 3.5in 1.097in; margin: 0; }
-        body { width: var(--label-w); height: var(--label-h); overflow: hidden; font-family: var(--font); }
+  const labelHtml = buildPrintableLabelHtml(qrDataUrl);
 
-        #label{
-          width: var(--label-w);
-          height: var(--label-h);
-          border: 0 !important;
-          border-radius: 0 !important;
-          box-sizing: border-box;
-          background: #fff;
-          position: relative;
-          overflow: hidden;
-        }
-        #label .textArea{
-          position:absolute;
-          top: var(--pad);
-          left: var(--pad);
-          bottom: var(--pad);
-          right: calc(var(--pad) + var(--qr) + var(--qr-gap));
-          display:flex;
-          flex-direction: column;
-          gap: 0.05in;
-        }
-        #label .topline{
-          display:flex;
-          justify-content: space-between;
-          align-items: baseline;
-          gap: 0.08in;
-          min-height: 0.24in;
-        }
-        #badgeNameOut{
-          font-size: 18pt;
-          font-weight: 800;
-          line-height: 1.0;
-          white-space: nowrap;
-          overflow:hidden;
-          text-overflow: ellipsis;
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-        #badgeNumberOut{
-          font-size: 9.5pt;
-          font-weight: 800;
-          line-height: 1.0;
-          white-space: nowrap;
-          flex: 0 0 auto;
-          text-align:right;
-        }
-        #label .mid{ display:flex; flex-direction: column; gap: 0.04in; }
-        #pronounsOut{ font-size: 11pt; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-        #badgeTypeOut{ font-size: 11pt; font-weight: 900; line-height: 1.05; white-space: nowrap; }
-
-        #qrBox{
-          position:absolute;
-          right: var(--pad);
-          bottom: var(--pad);
-          width: var(--qr);
-          height: var(--qr);
-          display:flex;
-          align-items:center;
-          justify-content:center;
-        }
-        #qrImg{ width: 100%; height: 100%; display:block; }
-      `;
-
-      const html = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Print Label</title>
-  <style>${printCss}</style>
-</head>
-<body>
-  ${labelHtml}
-</body>
-</html>`;
-
-      // Remove any prior print frame
-      const old = document.getElementById("printFrame");
-      if (old) old.remove();
-
-      const iframe = document.createElement("iframe");
-      iframe.id = "printFrame";
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentWindow.document;
-      doc.open();
-      doc.write(html);
-      doc.close();
-
-      // Give the browser a tick to layout images, then print
-      iframe.onload = () => {
-        setTimeout(() => {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          // Clean up after print (some browsers don't fire afterprint reliably)
-          setTimeout(() => iframe.remove(), 1500);
-        }, 50);
-      };
-
-      // Some browsers won’t fire iframe.onload for document.write, so also fallback:
-      setTimeout(() => {
-        try {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          setTimeout(() => iframe.remove(), 1500);
-        } catch {}
-      }, 200);
+  const printCss = `
+    :root{
+      --label-w: 3.5in;
+      --label-h: 1.097in;
+      --pad: 0.08in;
+      --qr: 0.62in;
+      --qr-gap: 0.06in;
+      --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 3.5in 1.097in;
+      margin: 0;
+    }
+
+    body {
+      width: var(--label-w);
+      height: var(--label-h);
+      overflow: hidden;
+      font-family: var(--font);
+    }
+
+    #label{
+      width: var(--label-w);
+      height: var(--label-h);
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-sizing: border-box;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #label .textArea{
+      position:absolute;
+      top: var(--pad);
+      left: var(--pad);
+      bottom: var(--pad);
+      right: calc(var(--pad) + var(--qr) + var(--qr-gap));
+      display:flex;
+      flex-direction: column;
+      gap: 0.05in;
+    }
+
+    #label .topline{
+      display:flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.08in;
+      min-height: 0.24in;
+    }
+
+    #badgeNameOut{
+      font-size: 18pt;
+      font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    #badgeNumberOut{
+      font-size: 9.5pt;
+      font-weight: 800;
+      line-height: 1.0;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      text-align:right;
+    }
+
+    #label .mid{
+      display:flex;
+      flex-direction: column;
+      gap: 0.04in;
+    }
+
+    #pronounsOut{
+      font-size: 11pt;
+      font-weight: 600;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+
+    #badgeTypeOut{
+      font-size: 11pt;
+      font-weight: 900;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    #qrBox{
+      position:absolute;
+      right: var(--pad);
+      bottom: var(--pad);
+      width: var(--qr);
+      height: var(--qr);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    #qrImg{
+      width: 100%;
+      height: 100%;
+      display:block;
+    }
+  `;
+
+  const html = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Print Label</title>
+        <style>${printCss}</style>
+      </head>
+      <body>
+        ${labelHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.focus();
+              window.print();
+            }, 100);
+          };
+        <\/script>
+      </body>
+    </html>
+  `;
+
+  // Open new window (required for Google Sites compatibility)
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) {
+    alert("Popup blocked. Please allow popups, then try again.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
 
     ["input", "change"].forEach(evt => {
       els.badgeName.addEventListener(evt, render);
