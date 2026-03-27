@@ -129,12 +129,12 @@
     }
 
     #badgeNameOut{
-      font-size: 22pt;
+      font-size: 18pt;
       font-weight: 800;
       line-height: 1.0;
       white-space: nowrap;
       overflow:hidden;
-      text-overflow: ellipsis;
+      text-overflow: clip;
       flex: 1 1 auto;
       min-width: 0;
     }
@@ -327,6 +327,16 @@
         );
       }
     }
+  }
+}
+    function fitTextToWidth(el, maxPt = 18, minPt = 8) {
+  let size = maxPt;
+  el.style.fontSize = size + "pt";
+
+  // Reduce font until it fits
+  while (el.scrollWidth > el.clientWidth && size > minPt) {
+    size -= 0.5;
+    el.style.fontSize = size + "pt";
   }
 }
     function QRCodeSimple(text) {
@@ -632,6 +642,11 @@
       const numShown = numRaw ? (numRaw.startsWith("#") ? numRaw : ("#" + numRaw)) : "#0000";
 
       els.badgeNameOut.textContent = name;
+      // Reset before measuring
+      els.badgeNameOut.style.fontSize = "18pt";
+
+      // Fit to available width
+      fitTextToWidth(els.badgeNameOut, 18, 8);
       els.badgeNumberOut.textContent = numShown;
       els.pronounsOut.textContent = els.pronouns.value || "";
       els.badgeTypeOut.textContent = els.badgeType.value || "";
